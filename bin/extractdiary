@@ -1,0 +1,37 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import logging
+
+import guidediary
+
+logging.basicConfig(level=logging.INFO)
+
+argObj = argparse.ArgumentParser()
+argObj.add_argument('infiles', nargs='*', type=argparse.FileType('rb'), default=[sys.stdin.buffer])
+argObj.add_argument('--report_duplicates', action='store_true')
+args = argObj.parse_args()
+
+rewriter = guidediary.DiaryRewriter()
+
+for diary_f in args.infiles:
+    rewriter.addFile(diary_f)
+    diary_f.close()
+
+print(rewriter.getDiary().toJSON())
+
+logging.info('Exact duplicates: %d\n' % len(rewriter.getExactDups()))
+
+def generate_ordinals():
+    import itertools
+    def suffixes(num):
+        return {1:'st',2:'nd',3:'rd'}.get(num%10,'th') if num < 4 or num > 20 else 'th'
+    for num in itertools.count(1):
+        yield str(num) + suffixes(num)
+
+if args.report_duplicates:
+    sys.stderr.write('Non-exact duplicates:\n')
+    sys.stderr.writelines(
+        [str(num) + ' duplicate: ' + str(dup)+'\n'
+         for (num,dup) in zip(generate_ordinals(), rewriter.getNonexactDuplicates())])
