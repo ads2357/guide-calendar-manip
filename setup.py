@@ -10,5 +10,7 @@ setup(
     author_email='example@example.org',
     url='https://devnull-as-a-service.com',
     packages=['guidediary'],
-    scripts=['bin/mergediaries','bin/extractdiary']
+    scripts=['bin/mergediaries','bin/extractdiary'],
+    test_suite='nose.collector',
+    tests_require=['nose'],
 )
