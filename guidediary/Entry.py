@@ -175,7 +175,7 @@ def main(args):
             entries = parseEntries(f)
     except struct.error as e:
         with open(args.filename, 'rb') as f:
-            logger.warn('missing 2 bytes at the end')
+            logger.warning('missing 2 bytes at the end')
             entries = parseEntries(f, add_x00x00 = True)
     print('found %d entries' % len(entries))
 

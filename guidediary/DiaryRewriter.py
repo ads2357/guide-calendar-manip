@@ -39,7 +39,7 @@ class DiaryRewriter:
                     self.exact_dups.append(entry)
                     self.running_stats['exact_dups'] +=1
                 else:
-                    self.logger.warn('Duplicate: ' + repr(ex.diff))
+                    self.logger.warning('Duplicate: ' + repr(ex.diff))
                     self.not_added.append(entry)
                     self.duplicates.append(ex.diff)
                     self.running_stats['nonexact_dups'] += 1
