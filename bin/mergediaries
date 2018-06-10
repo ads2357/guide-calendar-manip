@@ -3,6 +3,7 @@
 import argparse
 import sys
 import logging
+from dateutil import parser
 
 import guidediary
 
@@ -16,19 +17,25 @@ argObj.add_argument('-n', action='store_true', help="dry run")
 argObj.add_argument('--report_nonexact_duplicates', action='store_true')
 argObj.add_argument('--report_f', type=argparse.FileType('w'), default=sys.stderr)
 argObj.add_argument('--dump_edups', type=argparse.FileType('w'))
+argObj.add_argument('--after', type=str, help="only include entries after a certain date")
 
 args = argObj.parse_args()
 
 rewriter = guidediary.DiaryRewriter()
 
 for diary_f in args.infiles:
-    rewriter.addFile(diary_f)
+    if args.after:
+        date = parser.parse(args.after)
+        e_filt = lambda e: e.getDate() >= date
+        rewriter.addFile(diary_f, entry_filter=e_filt)
+    else:
+        rewriter.addFile(diary_f)
     diary_f.close()
 
 if args.notAddedFile:
     rewriter.writeNotAddedFile(args.notAddedFile)
     args.notAddedFile.close()
-    
+
 if not args.n:
     try:
         rewriter.writeFile(args.o)
@@ -53,5 +60,5 @@ if args.report_nonexact_duplicates:
 
 if args.dump_edups:
     args.dump_edups.writelines([repr(e) + '\n' for e in rewriter.getExactDups()])
-    
+
 logging.info(rewriter.getStats())

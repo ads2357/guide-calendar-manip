@@ -20,8 +20,9 @@ class DiaryRewriter:
                                'entries_added' : 0,
         }
 
-    def addFile(self, diary_f, swallow_duplicates=True):
+    def addFile(self, diary_f, entry_filter=lambda e: True, swallow_duplicates=True):
         entries = parseEntries(diary_f, add_x00x00=True)
+        entries = list(filter(entry_filter, entries))
         for entry in entries:
             self.running_stats['found_entries'] += 1
             try:
