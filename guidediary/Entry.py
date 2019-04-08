@@ -7,7 +7,7 @@ import argparse
 import json
 import itertools
 
-PADDING_BYTES = b' ' * 25
+PADDING_BYTES = b' ' * 50
 ENDMARK_BYTES = b'\x01\x00'
 END_ZERO_BYTES = b'\x00' * 8
 
