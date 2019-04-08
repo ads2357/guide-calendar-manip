@@ -2,3 +2,5 @@ __pycache__
 /dist
 /MANIFEST
 *.egg-info
+/.eggs
+/build

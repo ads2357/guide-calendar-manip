@@ -14,6 +14,12 @@ setup(
     install_requires = [
         'python-dateutil',
     ],
-    test_suite='nose.collector',
-    tests_require=['nose'],
+    # test_suite='nose.collector',
+    # tests_require=['nose'],
+    setup_requires = [
+        "pytest-runner"
+    ],
+    tests_require = [
+        "pytest"
+    ],
 )
