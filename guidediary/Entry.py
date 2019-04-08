@@ -31,15 +31,20 @@ FMT_STR = '<' + (''
                  + str(END_ZERO_LENGTH_8bit) + 's')
 
 BINARY_FORMAT = struct.Struct(FMT_STR)
+TEXT_CODEC = 'latin1'
 
 RawEntry = collections.namedtuple(
     'RawEntry', 'year month day hour prepad content suffix zeroend')
 
 class Entry:
     """Python representation of a diary entry"""
-    def __init__(self, date, text):
+    def __init__(self, date, text, raw):
         self.date = date
         self.text = text
+        self.raw  = raw
+
+    def getRaw(self):
+        return self.raw
 
     def getDate(self):
         return self.date
@@ -87,7 +92,8 @@ class Entry:
 
     def toDict(self):
         return { 'date' : self.date.isoformat(),
-                 'text' : self.text.strip()
+                 'text' : self.text.strip(),
+                 'raw'  : self.raw
         }
 
 class Diff:
@@ -113,7 +119,7 @@ class Diff:
             return (self.e1 == other.e1 and
                     self.e2 == other.e2)
         return NotImplemented
-    
+
 class BinaryFormatException(Exception):
     pass
 
@@ -121,10 +127,11 @@ def writeEntries(diary_f, entries, **kwargs):
     """Write the file ('wb') from the list of Entries in order"""
     for (ii,entry) in zip(itertools.count(0),entries):
         rawEntry = RawEntry(
-            entry.date.year, entry.date.month, entry.date.day, entry.date.hour,
-            PADDING_BYTES, entry.text.encode('unicode-escape'),
+            entry.getDate().year, entry.getDate().month, entry.getDate().day, entry.getDate().hour,
+            PADDING_BYTES, entry.getRaw(),
             ENDMARK_BYTES, END_ZERO_BYTES)
         entry_bytes = BINARY_FORMAT.pack(*rawEntry)
+        assert len(entry_bytes) == ENTRY_LENGTH_BYTES
         isLastEntry = ii + 1 == len(entries)
         if kwargs.get('sub_x00x00', False) and isLastEntry:
             diary_f.write(entry_bytes[:-2])
@@ -153,9 +160,10 @@ def parseEntries(diary_f, **kwargs):
             raise BinaryFormatException('Wrong zeroend: ' + repr(rawEntry.zeroend))
 
         date = datetime.datetime(rawEntry.year, rawEntry.month, rawEntry.day, rawEntry.hour)
-        content = rawEntry.content.decode('unicode_escape')
-        
-        entry = Entry(date, content)
+        text = rawEntry.content.decode(TEXT_CODEC)
+        bytestring = rawEntry.content
+        assert len(bytestring) == len(rawEntry.content)
+        entry = Entry(date, text, bytestring)
         ret_EntryList.append(entry)
 
     return ret_EntryList

@@ -5,7 +5,7 @@ from setuptools import setup
 setup(
     name='guidediary',
     description='Diary manipulation tools for Dolphin Guide',
-    version='0.0.1',
+    version='0.1.0',
     author='Anthony Stathers',
     author_email='example@example.org',
     url='https://devnull-as-a-service.com',
