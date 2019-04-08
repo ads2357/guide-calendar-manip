@@ -144,12 +144,13 @@ def parseEntries(diary_f, **kwargs):
     diary_bytes = diary_f.read()
     if kwargs.get('add_x00x00', False):
         diary_bytes += b'\x00'*2
+    transform_bytes = kwargs.get('transform_bytes', lambda x: x)
     logger.info('Number of bytes: %d = %d (mod %d)' %
                  (len(diary_bytes), len(diary_bytes) % ENTRY_LENGTH_BYTES, ENTRY_LENGTH_BYTES))
     assert isinstance(diary_bytes, bytes)
 
     ret_EntryList = []
-    
+
     for fields in BINARY_FORMAT.iter_unpack(diary_bytes):
         rawEntry = RawEntry._make(fields)
         if rawEntry.prepad != PADDING_BYTES:
@@ -161,7 +162,7 @@ def parseEntries(diary_f, **kwargs):
 
         date = datetime.datetime(rawEntry.year, rawEntry.month, rawEntry.day, rawEntry.hour)
         text = rawEntry.content.decode(TEXT_CODEC)
-        bytestring = rawEntry.content
+        bytestring = transform_bytes(rawEntry.content)
         assert len(bytestring) == len(rawEntry.content)
         entry = Entry(date, text, bytestring)
         ret_EntryList.append(entry)

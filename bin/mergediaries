@@ -4,10 +4,18 @@ import argparse
 import sys
 import logging
 from dateutil import parser
+import functools
 
 import guidediary
 
 logging.basicConfig(level=logging.INFO)
+
+# Sample filters
+byte_transform_func_dict = {
+    'id' : lambda x : x,
+    'remove_escapes' : lambda b: b.replace(br'\r\n', b'  \r\n'),
+    'reinstate_pounds' : lambda b: b.replace(br'\xa3', b'   \xa3'),
+}
 
 argObj = argparse.ArgumentParser()
 argObj.add_argument('infiles', nargs='*', type=argparse.FileType('rb'), default=[sys.stdin.buffer])
@@ -18,32 +26,52 @@ argObj.add_argument('--report_nonexact_duplicates', action='store_true')
 argObj.add_argument('--report_f', type=argparse.FileType('w'), default=sys.stderr)
 argObj.add_argument('--dump_edups', type=argparse.FileType('w'))
 argObj.add_argument('--after', type=str, help="only include entries after a certain date")
+argObj.add_argument(
+    '--bytefilter',
+    type=str,
+    choices=list(bfiltdict.keys()),
+    default=[],
+    action='append',
+    help="Apply the chosen functions to each byte",
+)
 
-args = argObj.parse_args()
+cmd_args = argObj.parse_args()
 
 rewriter = guidediary.DiaryRewriter()
 
-for diary_f in args.infiles:
-    if args.after:
-        date = parser.parse(args.after)
-        e_filt = lambda e: e.getDate() >= date
-        rewriter.addFile(diary_f, entry_filter=e_filt)
-    else:
-        rewriter.addFile(diary_f)
+def transform_bytes(byt):
+    """Takes a byte and applies each of the functions selected by the keys
+    in the cmd_args.bytefilter iterable."""
+    return functools.reduce(
+        lambda acc, elem: bfiltdict[elem](acc),
+        cmd_args.bytefilter,
+        byt
+    )
+
+for diary_f in cmd_args.infiles:
+    date_file = lambda e: e
+    if cmd_args.after:
+        date = parser.parse(cmd_args.after)
+        date_filt = lambda e: e.getDate() >= date
+    rewriter.addFile(diary_f, entry_filter=date_filt, transform_bytes=transform_bytes)
     diary_f.close()
 
-if args.notAddedFile:
-    rewriter.writeNotAddedFile(args.notAddedFile)
-    args.notAddedFile.close()
+if cmd_args.notAddedFile:
+    rewriter.writeNotAddedFile(cmd_args.notAddedFile)
+    cmd_args.notAddedFile.close()
 
-if not args.n:
+if not cmd_args.n:
     try:
-        rewriter.writeFile(args.o)
+        rewriter.writeFile(cmd_args.o)
     except DiaryRewriterException as ex:
         logging.exception(ex)
         exit(1)
 
 def generate_ordinals():
+    """Half-heartedly yields the English ordinals in order, numerically
+    abbreviated. Some of the elements yielded may be correct.
+
+    """
     import itertools
     yield '1st'
     yield '2nd'
@@ -51,14 +79,14 @@ def generate_ordinals():
     for num in itertools.count(4):
         yield str(num) + 'th'
 
-if args.report_nonexact_duplicates:
-    reportout = args.report_f
+if cmd_args.report_nonexact_duplicates:
+    reportout = cmd_args.report_f
     reportout.write('Non-exact duplicates, newer entries not added:\n')
     reportout.writelines(
         [str(num) + ' duplicate: ' + str(dup)+'\n\n'
          for (num,dup) in zip(generate_ordinals(), rewriter.getNonexactDuplicates())])
 
-if args.dump_edups:
-    args.dump_edups.writelines([repr(e) + '\n' for e in rewriter.getExactDups()])
+if cmd_args.dump_edups:
+    cmd_args.dump_edups.writelines([repr(e) + '\n' for e in rewriter.getExactDups()])
 
 logging.info(rewriter.getStats())
